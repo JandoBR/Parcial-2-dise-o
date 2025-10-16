@@ -1,0 +1,249 @@
+:root {
+    color-scheme: light;
+}
+
+* {
+    box-sizing: border-box
+}
+
+html,
+body,
+#root {
+    height: 100%
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #f6f7f9;
+    overflow: hidden;
+    color: #111
+}
+
+
+.container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 16px
+}
+
+.container.narrow {
+    max-width: 480px
+}
+
+
+.brand {
+    font-weight: 800
+}
+
+.link {
+    color: #2563eb;
+    text-decoration: none
+}
+
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    justify-content: center
+}
+
+.tab {
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    cursor: pointer
+}
+
+.tab--active {
+    background: #111;
+    color: #fff;
+    border-color: #111
+}
+
+
+.btn {
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid #111;
+    background: #111;
+    color: #fff;
+    cursor: pointer
+}
+
+.btn--outline {
+    background: transparent;
+    color: #111
+}
+
+
+label {
+    display: block;
+    margin-bottom: 10px
+}
+
+input,
+textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #fff
+}
+
+textarea {
+    min-height: 96px
+}
+
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap
+}
+
+
+.shell__header.container {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px
+}
+
+.header__right {
+    display: flex;
+    gap: 8px;
+    justify-self: end;
+    align-items: center
+}
+
+.shell__main.container {
+    position: relative;
+    height: calc(100vh - var(--header-h, 88px));
+    overflow: hidden;
+    /* clave: que no aparezca scroll fuera del panel */
+}
+
+.slider {
+    display: flex;
+    overflow-x: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-gutter: stable both-edges;
+    scroll-behavior: smooth;
+    width: 100%;
+    height: 100%;
+}
+
+
+.slider.grabbing {
+    cursor: grabbing
+}
+
+.panel {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    min-height: calc(100vh - 180px);
+    padding: 24px 0 48px;
+    box-sizing: border-box;
+    height: 100%;
+    overflow: hidden;
+    padding: 0;
+}
+
+
+.panel--scroll {
+    overflow-y: auto;
+    max-height: 100%;
+    padding-right: 6px;
+}
+
+
+.card {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 16px;
+    padding: 12px
+}
+
+.grid-2 {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr 1fr
+}
+
+@media (max-width: 800px) {
+    .grid-2 {
+        grid-template-columns: 1fr
+    }
+}
+
+/* Clean fade/slide; no scale, no progress bar */
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translate(-50%, 6px);
+    /* small offset for enter */
+    background: #111;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 12px;
+    z-index: 3000;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
+    opacity: 0;
+    pointer-events: none;
+    font-size: 14px;
+    will-change: transform, opacity;
+    transition: opacity .22s ease, transform .22s ease;
+}
+
+.toast.toast--show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    /* no scale -> no “dot” */
+}
+
+/* Ensure no leftover decorative elements */
+.toast::after {
+    content: none !important;
+}
+
+.card--highlight {
+    animation: highlight-glow 8s ease-out 0s 1;
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes highlight-glow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45),
+            0 0 12px 4px rgba(37, 99, 235, 0.35);
+        transform: scale(1.01);
+    }
+
+    25% {
+        box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.35),
+            0 0 16px 6px rgba(37, 99, 235, 0.25);
+        transform: scale(1.015);
+    }
+
+    60% {
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.20),
+            0 0 10px 4px rgba(37, 99, 235, 0.15);
+        transform: scale(1.005);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0),
+            0 0 0 0 rgba(37, 99, 235, 0);
+        transform: scale(1);
+    }
+}

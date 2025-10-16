@@ -1,0 +1,94 @@
+// src/pages/AuthLogin.jsx
+import { useState } from "react";
+import { useLocation, useNavigate, Link } from "react-router-dom";
+import { isAuthed, setAuth } from "../authStorage";
+
+export default function AuthLogin() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const redirectQ = new URLSearchParams(window.location.search).get("redirect");
+    const back = location.state?.from?.pathname || redirectQ || "/";
+
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+
+    function handleLogin(e) {
+        e.preventDefault();
+
+        // validaciones básicas de UI
+        if (!email.trim() || !password.trim()) {
+            setError("Por favor completa todos los campos.");
+            return;
+        }
+
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+            setError("El correo no tiene un formato válido.");
+            return;
+        }
+
+        // autenticación simulada
+        setAuth("dummy-token");
+        navigate(back, { replace: true });
+    }
+
+    if (isAuthed()) {
+        navigate("/", { replace: true });
+        return null;
+    }
+
+    return (
+        <div className="container" style={{ maxWidth: 420, marginTop: 48 }}>
+            <h1 style={{ marginBottom: 12 }}>Iniciar sesión</h1>
+            <form onSubmit={handleLogin} className="stack">
+                <label>
+                    Correo electrónico
+                    <input
+                        type="email"
+                        placeholder="tucorreo@ejemplo.com"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        required
+                    />
+                </label>
+
+                <label>
+                    Contraseña
+                    <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        required
+                    />
+                </label>
+
+                {error && (
+                    <div
+                        className="card"
+                        style={{
+                            background: "#fef2f2",
+                            color: "#7f1d1d",
+                            border: "1px solid #fecaca",
+                            borderRadius: 12,
+                            padding: "8px 12px",
+                        }}
+                    >
+                        {error}
+                    </div>
+                )}
+
+                <button className="btn" type="submit" style={{ marginTop: 8 }}>
+                    Entrar
+                </button>
+            </form>
+
+            <p style={{ marginTop: 16, textAlign: "center" }}>
+                ¿No tienes cuenta?{" "}
+                <Link to="/auth/register" className="link">
+                    Crear cuenta
+                </Link>
+            </p>
+        </div>
+    );
+}
