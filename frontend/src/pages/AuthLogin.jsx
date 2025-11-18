@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { isAuthed, setAuth } from "../authStorage";
 
+const API_BASE = "/api";
+
 export default function AuthLogin() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -13,8 +15,9 @@ export default function AuthLogin() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
-    function handleLogin(e) {
+    async function handleLogin(e) {
         e.preventDefault();
+        setError("");
 
         // validaciones básicas de UI
         if (!email.trim() || !password.trim()) {
@@ -27,15 +30,43 @@ export default function AuthLogin() {
             return;
         }
 
-        // autenticación simulada
-        setAuth("dummy-token");
-        navigate(back, { replace: true });
+        try {
+            const res = await fetch(`${API_BASE}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include", // ⬅️ importante para cookie de sesión
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (!res.ok) {
+                let msg = "Error al iniciar sesión.";
+                try {
+                    const data = await res.json();
+                    if (data?.detail) msg = data.detail;
+                } catch {
+                    // ignore
+                }
+                setError(msg);
+                return;
+            }
+
+            const user = await res.json();
+            console.log("Usuario autenticado:", user);
+
+            // solo flag de UI, la auth real es la cookie
+            setAuth("session");
+
+            navigate(back, { replace: true });
+        } catch (err) {
+            console.error(err);
+            setError("No se pudo conectar con el servidor.");
+        }
     }
 
-    if (isAuthed()) {
-        navigate("/", { replace: true });
-        return null;
-    }
+    //if (isAuthed()) {
+    //    navigate("/", { replace: true });
+    //    return null;
+    //}
 
     return (
         <div className="container" style={{ maxWidth: 420, marginTop: 48 }}>

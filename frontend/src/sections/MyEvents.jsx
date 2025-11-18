@@ -1,18 +1,112 @@
 import { useState, useMemo } from "react";
 
-function toDate(date, time) {
-    const hhmm = time && /^\d{2}:\d{2}$/.test(time) ? time : "23:59";
-    return new Date(`${date}T${hhmm}:00`);
+/* ----------------- helpers de fechas/horas compartidos ----------------- */
+
+const pad = (n) => String(n).padStart(2, "0");
+
+// normaliza date a "YYYY-MM-DD" o devuelve null
+function normalizeDateToISO(date) {
+    if (!date) return null;
+
+    if (typeof date === "string") {
+        const m = date.match(/^\d{4}-\d{2}-\d{2}/);
+        if (m) return m[0];
+
+        const d = new Date(date);
+        if (!isNaN(d.getTime())) {
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+        return null;
+    }
+
+    if (date instanceof Date && !isNaN(date.getTime())) {
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    return null;
 }
-function isPast(date, time) {
-    try { return toDate(date, time).getTime() < Date.now(); }
-    catch { return false; }
+
+// normaliza hora a "HH:MM" (acepta "HH:MM", "HH:MM:SS" o Date)
+function normalizeTimeToHHMM(t, fallback = "00:00") {
+    if (!t) return fallback;
+
+    if (typeof t === "string") {
+        const m = t.match(/^\d{2}:\d{2}/);
+        if (m) return m[0];
+        return fallback;
+    }
+
+    if (t instanceof Date && !isNaN(t.getTime())) {
+        return `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+    }
+
+    return fallback;
 }
+
+// calcula fecha/hora de fin: usa endtime si viene; si no, +1h
+function computeEnd(date, time, endtime) {
+    const dateIso = normalizeDateToISO(date);
+    if (!dateIso) {
+        return { endDate: null, endTime: null };
+    }
+
+    const startStr = normalizeTimeToHHMM(time, "00:00");
+
+    const start = new Date(`${dateIso}T${startStr}:00`);
+    if (isNaN(start.getTime())) {
+        return { endDate: null, endTime: null };
+    }
+
+    let end;
+    if (endtime) {
+        const endStr = normalizeTimeToHHMM(endtime, null);
+        if (endStr) {
+            end = new Date(`${dateIso}T${endStr}:00`);
+            if (isNaN(end.getTime())) {
+                end = new Date(start.getTime() + 60 * 60 * 1000);
+            }
+        } else {
+            end = new Date(start.getTime() + 60 * 60 * 1000);
+        }
+    } else {
+        end = new Date(start.getTime() + 60 * 60 * 1000);
+    }
+
+    if (isNaN(end.getTime())) {
+        return { endDate: null, endTime: null };
+    }
+
+    const endDateIso = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+    const endTimeStr = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+
+    return { endDate: endDateIso, endTime: endTimeStr };
+}
+
+// ahora usamos la hora de fin (real o +1h) para considerar si ya pasó
+function isPast(date, time, endtime) {
+    try {
+        const { endDate, endTime } = computeEnd(date, time, endtime);
+        if (!endDate || !endTime) return false;
+        const d = new Date(`${endDate}T${endTime}:00`);
+        if (isNaN(d.getTime())) return false;
+        return d.getTime() < Date.now();
+    } catch {
+        return false;
+    }
+}
+
 function formatDate(iso) {
     if (!iso) return "";
-    try { return new Date(iso + "T00:00:00").toLocaleDateString("es-ES"); }
-    catch { return iso; }
+    const dateIso = normalizeDateToISO(iso);
+    if (!dateIso) return String(iso);
+    try {
+        return new Date(dateIso + "T00:00:00").toLocaleDateString("es-ES");
+    } catch {
+        return dateIso;
+    }
 }
+
+/* ----------------- UI ----------------- */
 
 function SectionTitle({ children }) {
     return (
@@ -23,7 +117,6 @@ function SectionTitle({ children }) {
     );
 }
 
-/* 🌙 Modal reutilizable */
 function ConfirmModal({ open, onClose, onConfirm, title, message }) {
     if (!open) return null;
     return (
@@ -57,7 +150,13 @@ function ConfirmModal({ open, onClose, onConfirm, title, message }) {
     );
 }
 
-export default function MyEvents({ events = [], onDelete, onCopyLink }) {
+export default function MyEvents({
+    apiBase,
+    events = [],
+    onDelete,
+    onCopyLink,
+    showToast,
+}) {
     const [open, setOpen] = useState(() => new Set());
     const [showPast, setShowPast] = useState(false);
     const [confirmData, setConfirmData] = useState(null);
@@ -70,14 +169,63 @@ export default function MyEvents({ events = [], onDelete, onCopyLink }) {
         });
     };
 
+    // usar la fecha de fin (real o +1h) para separar próximos/pasados
     const { upcoming, past } = useMemo(() => {
         const up = [], pa = [];
-        for (const ev of events) (isPast(ev.date, ev.time) ? pa : up).push(ev);
+        for (const ev of events) {
+            (isPast(ev.date, ev.time, ev.endtime) ? pa : up).push(ev);
+        }
         return { upcoming: up, past: pa };
     }, [events]);
 
+    // 🔹 Eliminar evento vía API
+    async function handleDeleteEvent(eventId) {
+        if (!apiBase) {
+            console.warn("MyEvents: apiBase no definido, no puedo llamar al backend");
+            return;
+        }
+        try {
+            const res = await fetch(`${apiBase}/events/${eventId}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+
+            if (!res.ok) {
+                throw new Error(`Error ${res.status}`);
+            }
+
+            showToast?.("Evento eliminado correctamente", "success");
+            onDelete?.(eventId);
+        } catch (err) {
+            console.error("Error al eliminar evento:", err);
+            showToast?.("No se pudo eliminar el evento", "error");
+        }
+    }
+
     function renderEventCard(ev, expanded) {
         const invitees = Array.isArray(ev.invitees) ? ev.invitees : [];
+
+        const startDateIso = normalizeDateToISO(ev.date);
+        const startTimeStr = ev.time ? normalizeTimeToHHMM(ev.time, null) : null;
+        const { endDate, endTime } = computeEnd(ev.date, ev.time, ev.endtime);
+        const sameDay = endDate && startDateIso && endDate === startDateIso;
+
+        const dateLine = (() => {
+            if (!startDateIso) return "Fecha inválida";
+
+            if (sameDay) {
+                // Ej: 20/10/2025 · 09:30–10:30
+                const range = startTimeStr
+                    ? ` · ${startTimeStr}${endTime ? `–${endTime}` : ""}`
+                    : "";
+                return `${formatDate(startDateIso)}${range}`;
+            }
+
+            // Multi-día (por si algún día lo usas)
+            const left = `${formatDate(startDateIso)}${startTimeStr ? ` · ${startTimeStr}` : ""}`;
+            const right = endDate ? `${formatDate(endDate)}${endTime ? ` · ${endTime}` : ""}` : "";
+            return right ? `${left} → ${right}` : left;
+        })();
 
         return (
             <article
@@ -107,7 +255,7 @@ export default function MyEvents({ events = [], onDelete, onCopyLink }) {
                                 overflow: "hidden",
                                 textOverflow: expanded ? "clip" : "ellipsis",
                                 wordBreak: "break-word",
-                                maxWidth: expanded ? "100%" : "92%", // 👈 se corta antes del borde
+                                maxWidth: expanded ? "100%" : "92%",
                             }}
                             title={!expanded ? ev.title : undefined}
                         >
@@ -119,11 +267,11 @@ export default function MyEvents({ events = [], onDelete, onCopyLink }) {
                                 whiteSpace: expanded ? "normal" : "nowrap",
                                 overflow: "hidden",
                                 textOverflow: expanded ? "clip" : "ellipsis",
-                                maxWidth: expanded ? "100%" : "92%", // 👈 mismo ajuste
+                                maxWidth: expanded ? "100%" : "92%",
                             }}
-                            title={!expanded ? `${ev.date} ${ev.location || ""}` : undefined}
+                            title={!expanded ? `${dateLine} ${ev.location || ""}` : undefined}
                         >
-                            {formatDate(ev.date)}{ev.time ? ` · ${ev.time}` : ""} — {ev.location || "Sin lugar"}
+                            {dateLine} — {ev.location || "Sin lugar"}
                         </p>
                     </div>
                     <button
@@ -145,7 +293,7 @@ export default function MyEvents({ events = [], onDelete, onCopyLink }) {
                             whiteSpace: expanded ? "normal" : "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
-                            maxWidth: expanded ? "100%" : "92%", // 👈 igual
+                            maxWidth: expanded ? "100%" : "92%",
                         }}
                         title={!expanded ? ev.description : undefined}
                     >
@@ -191,9 +339,22 @@ export default function MyEvents({ events = [], onDelete, onCopyLink }) {
                                 gap: 6,
                             }}>
                                 {invitees.map((p, idx) => {
-                                    const r = ["confirmed", "rejected", "pending"].includes(p?.rsvp) ? p.rsvp : "pending";
-                                    const icon = r === "confirmed" ? "✅" : r === "rejected" ? "❌" : "⏳";
-                                    const label = r === "confirmed" ? "Confirmado" : r === "rejected" ? "Rechazado" : "Pendiente";
+                                    const r = ["confirmed", "rejected", "pending", "accepted"].includes(p?.rsvp)
+                                        ? p.rsvp
+                                        : "pending";
+
+                                    const normalized = r === "accepted" ? "confirmed" : r;
+                                    const icon = normalized === "confirmed"
+                                        ? "✅"
+                                        : normalized === "rejected"
+                                            ? "❌"
+                                            : "⏳";
+                                    const label = normalized === "confirmed"
+                                        ? "Confirmado"
+                                        : normalized === "rejected"
+                                            ? "Rechazado"
+                                            : "Pendiente";
+
                                     return (
                                         <li
                                             key={`${ev.id}-g-${idx}`}
@@ -264,8 +425,9 @@ export default function MyEvents({ events = [], onDelete, onCopyLink }) {
                 title="¿Eliminar evento?"
                 message={`¿Seguro que quieres eliminar “${confirmData?.title}”? Esta acción no se puede deshacer.`}
                 onClose={() => setConfirmData(null)}
-                onConfirm={() => {
-                    onDelete?.(confirmData.id);
+                onConfirm={async () => {
+                    if (!confirmData) return;
+                    await handleDeleteEvent(confirmData.id);
                     setConfirmData(null);
                 }}
             />

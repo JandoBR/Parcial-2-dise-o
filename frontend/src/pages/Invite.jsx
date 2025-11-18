@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+const API_BASE = "/api";
+
+
 
 /* Tu parseToken tal cual */
 function parseToken() {
@@ -12,20 +15,23 @@ function parseToken() {
     return null;
 }
 
-/* Tu simulación de servidor */
 async function acceptInviteOnServer(token) {
-    // simula trabajo inesperado real con un pequeño delay
-    await new Promise(r => setTimeout(r, 50));
-    return {
-        id: `inv-${token.slice(0, 10)}`,
-        title: "Nueva invitación",
-        date: "2025-11-05",
-        time: "18:00",
-        location: "Sala B",
-        host: "Organizador",
-        rsvp: "pending",
-    };
+    const res = await fetch(`${API_BASE}/invite-links/${token}/accept`, {
+        method: "POST",
+        credentials: "include",  // importante para que mande la cookie de sesión
+    });
+
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error("Error acceptInviteOnServer:", res.status, text);
+        throw new Error(`Error ${res.status} aceptando invitación`);
+    }
+
+    // Devuelve un objeto con la forma de InvitationOut:
+    // { id, title, date, time, location, host, rsvp }
+    return await res.json();
 }
+
 
 function isAuthed() {
     return Boolean(localStorage.getItem("ee_auth"));

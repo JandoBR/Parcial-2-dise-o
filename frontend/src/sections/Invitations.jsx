@@ -1,13 +1,106 @@
 import { useEffect, useRef, useMemo, useState } from "react";
 
-function toDate(date, time) {
-    const hhmm = time && /^\d{2}:\d{2}$/.test(time) ? time : "23:59";
-    return new Date(`${date}T${hhmm}:00`);
+// 🔧 helper común
+const pad = (n) => String(n).padStart(2, "0");
+
+// normaliza date a "YYYY-MM-DD" o devuelve null
+function normalizeDateToISO(date) {
+    if (!date) return null;
+
+    // ya viene como string "YYYY-MM-DD"
+    if (typeof date === "string") {
+        const m = date.match(/^\d{4}-\d{2}-\d{2}/);
+        if (m) return m[0];
+
+        // intenta parsear cualquier otra string válida
+        const d = new Date(date);
+        if (!isNaN(d.getTime())) {
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+        return null;
+    }
+
+    // viene como objeto Date
+    if (date instanceof Date && !isNaN(date.getTime())) {
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    return null;
 }
-function isPast(date, time) {
-    try { return toDate(date, time).getTime() < Date.now(); }
-    catch { return false; }
+
+// normaliza hora a "HH:MM" (acepta "HH:MM", "HH:MM:SS" o Date)
+function normalizeTimeToHHMM(t, fallback = "00:00") {
+    if (!t) return fallback;
+
+    if (typeof t === "string") {
+        const m = t.match(/^\d{2}:\d{2}/); // agarra HH:MM de "HH:MM" o "HH:MM:SS"
+        if (m) return m[0];
+        return fallback;
+    }
+
+    if (t instanceof Date && !isNaN(t.getTime())) {
+        return `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+    }
+
+    return fallback;
 }
+
+// 🔹 Calcula fecha/hora de fin a partir de inicio y endtime opcional
+function computeEnd(date, time, endtime) {
+    const dateIso = normalizeDateToISO(date);
+    if (!dateIso) {
+        // no podemos construir nada coherente
+        return { endDate: null, endTime: null };
+    }
+
+    const startStr = normalizeTimeToHHMM(time, "00:00");
+
+    const start = new Date(`${dateIso}T${startStr}:00`);
+    if (isNaN(start.getTime())) {
+        // mejor no seguir propagando NaN
+        return { endDate: null, endTime: null };
+    }
+
+    let end;
+
+    if (endtime) {
+        const endStr = normalizeTimeToHHMM(endtime, null);
+        if (endStr) {
+            end = new Date(`${dateIso}T${endStr}:00`);
+            if (isNaN(end.getTime())) {
+                end = new Date(start.getTime() + 60 * 60 * 1000);
+            }
+        } else {
+            end = new Date(start.getTime() + 60 * 60 * 1000);
+        }
+    } else {
+        // ⬅️ si no hay hora de fin: default +1h
+        end = new Date(start.getTime() + 60 * 60 * 1000);
+    }
+
+    if (isNaN(end.getTime())) {
+        return { endDate: null, endTime: null };
+    }
+
+    const endDateIso = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+    const endTimeStr = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+
+    return { endDate: endDateIso, endTime: endTimeStr };
+}
+
+// ahora usamos la hora de fin (real o +1h) para considerar si ya pasó
+function isPast(date, time, endtime) {
+    try {
+        const { endDate, endTime } = computeEnd(date, time, endtime);
+        if (!endDate || !endTime) return false;
+        const d = new Date(`${endDate}T${endTime}:00`);
+        if (isNaN(d.getTime())) return false;
+        return d.getTime() < Date.now();
+    } catch {
+        return false;
+    }
+}
+
 function formatDate(iso) {
     if (!iso) return "";
     try { return new Date(iso + "T00:00:00").toLocaleDateString("es-ES"); }
@@ -75,10 +168,12 @@ export default function Invitations({ invites = [], onRsvp, onDeleteInvite, high
         }
     }, [highlightId]);
 
-    // dividir en próximas/pasadas
+    // dividir en próximas/pasadas usando la hora de fin (real o +1h)
     const { upcoming, past } = useMemo(() => {
         const up = [], pa = [];
-        for (const inv of invites) (isPast(inv.date, inv.time) ? pa : up).push(inv);
+        for (const inv of invites) {
+            (isPast(inv.date, inv.time, inv.endtime) ? pa : up).push(inv);
+        }
         return { upcoming: up, past: pa };
     }, [invites]);
 
@@ -113,6 +208,14 @@ export default function Invitations({ invites = [], onRsvp, onDeleteInvite, high
                         <div className="grid-2">
                             {upcoming.map(inv => {
                                 const isHighlighted = highlightId === inv.id;
+
+                                const { endDate, endTime } = computeEnd(inv.date, inv.time, inv.endtime);
+                                const sameDay = endDate === inv.date;
+
+                                const dateLine = sameDay
+                                    ? `${formatDate(inv.date)}${inv.time ? ` · ${inv.time}–${endTime}` : ""}`
+                                    : `${formatDate(inv.date)}${inv.time ? ` · ${inv.time}` : ""} → ${formatDate(endDate)} · ${endTime}`;
+
                                 return (
                                     <article
                                         key={inv.id}
@@ -128,11 +231,17 @@ export default function Invitations({ invites = [], onRsvp, onDeleteInvite, high
                                                 <h3 style={{ margin: 0, ...oneLineCut(false) }} title={inv.title}>
                                                     {inv.title}
                                                 </h3>
-                                                <p style={{ margin: "4px 0", ...oneLineCut(false) }}
-                                                    title={`${formatDate(inv.date)}${inv.time ? ` · ${inv.time}` : ""} — ${inv.location || "Sin lugar"}`}>
-                                                    {formatDate(inv.date)}{inv.time ? ` · ${inv.time}` : ""} — {inv.location || "Sin lugar"}
+                                                <p
+                                                    style={{ margin: "4px 0", ...oneLineCut(false) }}
+                                                    title={`${dateLine} — ${inv.location || "Sin lugar"}`}
+                                                >
+                                                    {dateLine} — {inv.location || "Sin lugar"}
                                                 </p>
-                                                <p className="muted" style={{ margin: 0, ...oneLineCut(false) }} title={`Organiza: ${inv.host || "—"}`}>
+                                                <p
+                                                    className="muted"
+                                                    style={{ margin: 0, ...oneLineCut(false) }}
+                                                    title={`Organiza: ${inv.host || "—"}`}
+                                                >
                                                     Organiza: {inv.host || "—"}
                                                 </p>
                                             </div>
@@ -180,6 +289,14 @@ export default function Invitations({ invites = [], onRsvp, onDeleteInvite, high
                         <div className="grid-2">
                             {past.map(inv => {
                                 const isHighlighted = highlightId === inv.id;
+
+                                const { endDate, endTime } = computeEnd(inv.date, inv.time, inv.endtime);
+                                const sameDay = endDate === inv.date;
+
+                                const dateLine = sameDay
+                                    ? `${formatDate(inv.date)}${inv.time ? ` · ${inv.time}–${endTime}` : ""}`
+                                    : `${formatDate(inv.date)}${inv.time ? ` · ${inv.time}` : ""} → ${formatDate(endDate)} · ${endTime}`;
+
                                 return (
                                     <article
                                         key={inv.id}
@@ -195,11 +312,17 @@ export default function Invitations({ invites = [], onRsvp, onDeleteInvite, high
                                                 <h3 style={{ margin: 0, ...oneLineCut(false) }} title={inv.title}>
                                                     {inv.title}
                                                 </h3>
-                                                <p style={{ margin: "4px 0", ...oneLineCut(false) }}
-                                                    title={`${formatDate(inv.date)}${inv.time ? ` · ${inv.time}` : ""} — ${inv.location || "Sin lugar"}`}>
-                                                    {formatDate(inv.date)}{inv.time ? ` · ${inv.time}` : ""} — {inv.location || "Sin lugar"}
+                                                <p
+                                                    style={{ margin: "4px 0", ...oneLineCut(false) }}
+                                                    title={`${dateLine} — ${inv.location || "Sin lugar"}`}
+                                                >
+                                                    {dateLine} — {inv.location || "Sin lugar"}
                                                 </p>
-                                                <p className="muted" style={{ margin: 0, ...oneLineCut(false) }} title={`Organiza: ${inv.host || "—"}`}>
+                                                <p
+                                                    className="muted"
+                                                    style={{ margin: 0, ...oneLineCut(false) }}
+                                                    title={`Organiza: ${inv.host || "—"}`}
+                                                >
                                                     Organiza: {inv.host || "—"}
                                                 </p>
                                             </div>

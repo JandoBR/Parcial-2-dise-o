@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 
+const API_BASE = "/api";
+
+
 export default function AuthRegister() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -12,7 +15,7 @@ export default function AuthRegister() {
     const [pass, setPass] = useState("");
     const [error, setError] = useState("");
 
-    function fakeRegister(e) {
+    async function handleRegister(e) {
         e.preventDefault();
         setError("");
 
@@ -30,10 +33,39 @@ export default function AuthRegister() {
             return;
         }
 
-        // Registro simulado
-        localStorage.setItem("ee_auth", "1");
-        navigate(from, { replace: true });
+        try {
+            const res = await fetch(`${API_BASE}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password: pass,
+                }),
+            });
+
+            if (!res.ok) {
+                let msg = "Error al crear la cuenta.";
+                try {
+                    const data = await res.json();
+                    if (data?.detail) msg = data.detail;
+                } catch {
+                    // ignore
+                }
+                setError(msg);
+                return;
+            }
+
+            // No logueamos automáticamente, lo mandamos al login
+            navigate(`/auth/login?redirect=${encodeURIComponent(from)}`, {
+                replace: true,
+            });
+        } catch (err) {
+            console.error(err);
+            setError("No se pudo conectar con el servidor.");
+        }
     }
+
 
     return (
         <div className="container narrow" style={{ marginTop: 48 }}>
@@ -42,7 +74,7 @@ export default function AuthRegister() {
                 Crea tu cuenta para comenzar a organizar eventos fácilmente.
             </p>
 
-            <form onSubmit={fakeRegister} className="stack">
+            <form onSubmit={handleRegister} className="stack">
                 <label>
                     Nombre
                     <input
