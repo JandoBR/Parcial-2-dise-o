@@ -4,6 +4,7 @@ from typing import List
 from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
+from zoneinfo import ZoneInfo
 
 from base import (
     get_session,
@@ -68,11 +69,15 @@ from schemas import (
     TeamInviteRequest,
     SimpleUserOut,
     EventInviteUserRequest,
+    TimezoneUpdate,
     
 )
 
 router = APIRouter(prefix="/api", tags=["events"])
 auth_router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+
 
 
 
@@ -97,6 +102,22 @@ def get_current_user(
 
     return user
 
+
+@auth_router.post("/me/timezone")
+def update_my_timezone(
+    data: TimezoneUpdate,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        ZoneInfo(data.timezone)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid timezone")
+
+    current_user.timezone = data.timezone
+    db.flush()
+    db.refresh(current_user)
+    return {"timezone": current_user.timezone}
 
 
 @router.get("/calendar/ics-url")
@@ -129,7 +150,8 @@ def calendar_feed(
         raise HTTPException(status_code=404, detail="Calendar not found")
 
     events = list_events_for_calendar(db, user.id)
-    ics_str = generate_ics_for_events(events)
+
+    ics_str = generate_ics_for_events(events, timezone_name=user.timezone)
 
     return Response(content=ics_str, media_type="text/calendar")
 

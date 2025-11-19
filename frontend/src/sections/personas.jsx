@@ -275,7 +275,7 @@ export default function People({ apiBase, showToast, isActive }) {
     return (
         <div
             style={{
-                maxWidth: 900,
+                width: "100%",
                 margin: "0 auto",
                 display: "grid",
                 gap: 16,

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { isAuthed, setAuth } from "../authStorage";
+import bgImage from "../assets/photo-1464618663641-bbdd760ae84a.jpg";
 
 const API_BASE = "/api";
 
@@ -69,57 +70,83 @@ export default function AuthLogin() {
     //}
 
     return (
-        <div className="container" style={{ maxWidth: 420, marginTop: 48 }}>
-            <h1 style={{ marginBottom: 12 }}>Iniciar sesión</h1>
-            <form onSubmit={handleLogin} className="stack">
-                <label>
-                    Correo electrónico
-                    <input
-                        type="email"
-                        placeholder="tucorreo@ejemplo.com"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        required
-                    />
-                </label>
+        <div
+            style={{
+                minHeight: "100vh",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundImage: `url(${bgImage})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundAttachment: "fixed",
+                padding: 24,
+            }}
+        >
+            <div
+                className="container"
+                style={{
+                    maxWidth: 420,
+                    width: "100%",
+                    background: "white",
+                    padding: 24,
+                    borderRadius: 20,
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+                }}
+            >
+                <h1 style={{ marginBottom: 12 }}>Iniciar sesión</h1>
 
-                <label>
-                    Contraseña
-                    <input
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        required
-                    />
-                </label>
+                <form onSubmit={handleLogin} className="stack">
+                    <label>
+                        Correo electrónico
+                        <input
+                            type="email"
+                            placeholder="tucorreo@ejemplo.com"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            required
+                        />
+                    </label>
 
-                {error && (
-                    <div
-                        className="card"
-                        style={{
-                            background: "#fef2f2",
-                            color: "#7f1d1d",
-                            border: "1px solid #fecaca",
-                            borderRadius: 12,
-                            padding: "8px 12px",
-                        }}
-                    >
-                        {error}
-                    </div>
-                )}
+                    <label>
+                        Contraseña
+                        <input
+                            type="password"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            required
+                        />
+                    </label>
 
-                <button className="btn" type="submit" style={{ marginTop: 8 }}>
-                    Entrar
-                </button>
-            </form>
+                    {error && (
+                        <div
+                            className="card"
+                            style={{
+                                background: "#fef2f2",
+                                color: "#7f1d1d",
+                                border: "1px solid #fecaca",
+                                borderRadius: 12,
+                                padding: "8px 12px",
+                            }}
+                        >
+                            {error}
+                        </div>
+                    )}
 
-            <p style={{ marginTop: 16, textAlign: "center" }}>
-                ¿No tienes cuenta?{" "}
-                <Link to="/auth/register" className="link">
-                    Crear cuenta
-                </Link>
-            </p>
+                    <button className="btn" type="submit" style={{ marginTop: 8 }}>
+                        Entrar
+                    </button>
+                </form>
+
+                <p style={{ marginTop: 16, textAlign: "center" }}>
+                    ¿No tienes cuenta?{" "}
+                    <Link to="/auth/register" className="link">
+                        Crear cuenta
+                    </Link>
+                </p>
+            </div>
         </div>
     );
+
 }

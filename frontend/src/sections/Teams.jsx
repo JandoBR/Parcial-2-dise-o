@@ -914,7 +914,7 @@ export default function Teams({ apiBase, showToast, isActive }) {
         <>
             <div
                 style={{
-                    maxWidth: 900,
+                    width: "99%",
                     margin: "0 auto",
                     display: "grid",
                     gap: 16,

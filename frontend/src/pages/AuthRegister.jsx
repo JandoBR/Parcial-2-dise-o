@@ -1,6 +1,7 @@
 // src/pages/AuthRegister.jsx
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import bgImage from "../assets/photo-1464618663641-bbdd760ae84a.jpg";
 
 const API_BASE = "/api";
 
@@ -68,70 +69,105 @@ export default function AuthRegister() {
 
 
     return (
-        <div className="container narrow" style={{ marginTop: 48 }}>
-            <h1 style={{ marginBottom: 12 }}>EventEase — Registro</h1>
-            <p className="muted" style={{ marginTop: 0, marginBottom: 24 }}>
-                Crea tu cuenta para comenzar a organizar eventos fácilmente.
-            </p>
+        <div
+            style={{
+                minHeight: "100vh",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundImage: `url(${bgImage})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundAttachment: "fixed",
+                padding: 24,
+            }}
+        >
+            <div
+                className="container narrow"
+                style={{
+                    marginTop: 0,
+                    width: "100%",
+                    background: "white",
+                    padding: 24,
+                    borderRadius: 20,
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+                    maxWidth: 480, // matches your previous layout
+                }}
+            >
+                <h1 style={{ marginBottom: 12 }}>EventEase — Registro</h1>
 
-            <form onSubmit={handleRegister} className="stack">
-                <label>
-                    Nombre
-                    <input
-                        type="text"
-                        placeholder="Tu nombre"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        required
-                    />
-                </label>
+                <p className="muted" style={{ marginTop: 0, marginBottom: 24 }}>
+                    Crea tu cuenta para comenzar a organizar eventos fácilmente.
+                </p>
 
-                <label>
-                    Correo
-                    <input
-                        type="email"
-                        placeholder="tucorreo@ejemplo.com"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        required
-                    />
-                </label>
+                <form onSubmit={handleRegister} className="stack">
+                    <label>
+                        Nombre
+                        <input
+                            type="text"
+                            placeholder="Tu nombre"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            required
+                        />
+                    </label>
 
-                <label>
-                    Contraseña
-                    <input
-                        type="password"
-                        placeholder="••••••••"
-                        value={pass}
-                        onChange={e => setPass(e.target.value)}
-                        required
-                    />
-                </label>
+                    <label>
+                        Correo
+                        <input
+                            type="email"
+                            placeholder="tucorreo@ejemplo.com"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            required
+                        />
+                    </label>
 
-                {error && (
+                    <label>
+                        Contraseña
+                        <input
+                            type="password"
+                            placeholder="••••••••"
+                            value={pass}
+                            onChange={e => setPass(e.target.value)}
+                            required
+                        />
+                    </label>
+
+                    {error && (
+                        <div
+                            className="card"
+                            style={{
+                                background: "#fef2f2",
+                                color: "#7f1d1d",
+                                border: "1px solid #fecaca",
+                                borderRadius: 12,
+                                padding: "8px 12px",
+                            }}
+                        >
+                            {error}
+                        </div>
+                    )}
+
                     <div
-                        className="card"
+                        className="row"
                         style={{
-                            background: "#fef2f2",
-                            color: "#7f1d1d",
-                            border: "1px solid #fecaca",
-                            borderRadius: 12,
-                            padding: "8px 12px",
+                            justifyContent: "space-between",
+                            marginTop: 8,
+                            alignItems: "center",
                         }}
                     >
-                        {error}
-                    </div>
-                )}
+                        <button className="btn" type="submit">
+                            Crear cuenta
+                        </button>
 
-                <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}>
-                    <button className="btn" type="submit">
-                        Crear cuenta
-                    </button>
-                    <Link className="link" to="/auth/login">
-                        Iniciar sesión
-                    </Link>
-                </div>
-            </form>
+                        <Link className="link" to="/auth/login">
+                            Iniciar sesión
+                        </Link>
+                    </div>
+                </form>
+            </div>
         </div>
     );
+
 }

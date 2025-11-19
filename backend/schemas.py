@@ -65,7 +65,8 @@ class EventOut(BaseModel):
     class Config:
         from_attributes = True
 
-
+class TimezoneUpdate(BaseModel):
+    timezone: str
 
 class InvitationOut(BaseModel):
     id: int

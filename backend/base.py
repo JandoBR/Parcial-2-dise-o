@@ -1,5 +1,7 @@
-from datetime import datetime, date, time
-
+from datetime import datetime, date, time, timezone
+from zoneinfo import ZoneInfo
+from datetime import datetime, date, time, timezone,tzinfo
+from typing import List
 from contextlib import contextmanager
 import bcrypt
 from secrets import token_urlsafe
@@ -26,7 +28,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 DB_USER = "eventease"
 DB_PASS = "eventease"
-DB_HOST = "10.0.0.2"
+DB_HOST = "localhost"
 DB_PORT = 5432
 DB_NAME = "eventeasedb"
 
@@ -52,6 +54,8 @@ class User(Base):
     password_hash = Column(LargeBinary(60), nullable=False)
 
     calendar_token = Column(String(64), unique=True, nullable=True)
+
+    timezone = Column(String(64), nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(
@@ -311,18 +315,18 @@ def list_events_for_calendar(db: Session, user_id: int) -> list[Event]:
 # ICS GENERATION
 # -----------------------------------------------------------------------
 
-def _combine_date_time(d: date, t: time | None) -> datetime:
+def _combine_date_time(d: date, t: time | None, tz: tzinfo) -> datetime:
     if t is None:
         t = time(0, 0)
-    # "Floating time" sin zona: Google lo interpreta según la zona del calendario
-    return datetime(d.year, d.month, d.day, t.hour, t.minute, t.second)
+    # interpretamos date+time como hora local del usuario
+    return datetime(d.year, d.month, d.day, t.hour, t.minute, t.second, tzinfo=tz)
 
 
-def _format_dt(dt: datetime) -> str:
-    """
-    Formato ICS sin zona: YYYYMMDDTHHMMSS
-    """
-    return dt.strftime("%Y%m%dT%H%M%S")
+def _format_dt_utc(dt: datetime) -> str:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    dt_utc = dt.astimezone(timezone.utc)
+    return dt_utc.strftime("%Y%m%dT%H%M%SZ")
 
 
 def _escape_ics(text: str | None) -> str:
@@ -336,8 +340,22 @@ def _escape_ics(text: str | None) -> str:
     )
 
 
-def generate_ics_for_events(events: list[Event]) -> str:
-    now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+def generate_ics_for_events(
+    events: list[Event],
+    timezone_name: str | None = None,
+) -> str:
+    # 1) Resolver la zona horaria del usuario
+    if timezone_name:
+        try:
+            local_tz = ZoneInfo(timezone_name)
+        except Exception:
+            local_tz = timezone.utc
+    else:
+        # fallback si el user aún no tiene tz
+        local_tz = timezone.utc
+
+    # 2) DTSTAMP siempre en UTC
+    now_str = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     lines: list[str] = [
         "BEGIN:VCALENDAR",
@@ -345,15 +363,16 @@ def generate_ics_for_events(events: list[Event]) -> str:
         "PRODID:-//EventEase//EN",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
+        # hint para algunos clientes
+        f"X-WR-TIMEZONE:{timezone_name or 'UTC'}",
     ]
 
     for ev in events:
-        start_dt = _combine_date_time(ev.date, ev.time)
+        start_dt = _combine_date_time(ev.date, ev.time, local_tz)
 
         if ev.endtime is not None:
-            end_dt = _combine_date_time(ev.date, ev.endtime)
+            end_dt = _combine_date_time(ev.date, ev.endtime, local_tz)
         else:
-            # por defecto +1h
             end_dt = start_dt.replace(hour=start_dt.hour + 1)
 
         uid = f"eventease-{ev.id}@eventease"
@@ -361,8 +380,8 @@ def generate_ics_for_events(events: list[Event]) -> str:
         lines.append("BEGIN:VEVENT")
         lines.append(f"UID:{uid}")
         lines.append(f"DTSTAMP:{now_str}")
-        lines.append(f"DTSTART:{_format_dt(start_dt)}")
-        lines.append(f"DTEND:{_format_dt(end_dt)}")
+        lines.append(f"DTSTART:{_format_dt_utc(start_dt)}")
+        lines.append(f"DTEND:{_format_dt_utc(end_dt)}")
         lines.append(f"SUMMARY:{_escape_ics(ev.title)}")
 
         if ev.description:
@@ -374,7 +393,6 @@ def generate_ics_for_events(events: list[Event]) -> str:
 
     lines.append("END:VCALENDAR")
     return "\r\n".join(lines) + "\r\n"
-
 
 # -----------------------------------------------------------------------
 # HELPERS
@@ -903,36 +921,41 @@ def list_teams_invited_to_event(db: Session, event_id: int):
         EventInvitesTeam.event_id == event_id
     ).all()
 
-def auto_invite_team_members(db: Session, event_id: int, team_id: int):
-    # Get all accepted team members
-    members = db.query(TeamMember).filter(
-        TeamMember.team_id == team_id,
-        TeamMember.status == "accepted"
-    ).all()
+def auto_invite_team_members(
+    db: Session,
+    event_id: int,
+    team_id: int,
+) -> List[EventInvitation]:
+    event = get_event_by_id(db, event_id)
+    if event is None:
+        raise ValueError("Event not found")
 
-    created = []
-
-    for member in members:
-        # Avoid duplicate invites
-        existing = db.query(EventInvitation).filter(
-            EventInvitation.event_id == event_id,
-            EventInvitation.user_id == member.user_id
-        ).first()
-
-        if existing:
-            continue  # skip if already invited
-
-        invite = EventInvitation(
-            event_id=event_id,
-            user_id=member.user_id,
-            status="pending"
+    members = (
+        db.query(TeamMember)
+        .filter(
+            TeamMember.team_id == team_id,
+            TeamMember.status == "accepted",
         )
+        .all()
+    )
 
-        db.add(invite)
-        db.flush()
-        db.refresh(invite)
+    created: list[EventInvitation] = []
 
-        created.append(invite)
+    for m in members:
+        if m.user_id == event.owner_id:
+            continue
+
+        try:
+            inv = invite_user_to_event(
+                db=db,
+                event_id=event_id,
+                user_id=m.user_id,
+            )
+        except ValueError:
+            # ya estaba invitado, etc.
+            continue
+
+        created.append(inv)
 
     return created
 
