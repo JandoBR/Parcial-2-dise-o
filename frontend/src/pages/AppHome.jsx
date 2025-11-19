@@ -321,11 +321,17 @@ export default function AppHome() {
         return () => el.removeEventListener("scroll", onScroll);
     }, [active, events.length, invites.length]);
 
-    // sincroniza scroll horizontal del slider al cambiar tab
     useEffect(() => {
         const el = trackRef.current;
         if (!el) return;
-        el.scrollTo({ left: active * el.clientWidth, behavior: "smooth" });
+
+        const child = el.children[active];
+        if (!child) return;
+
+        el.scrollTo({
+            left: child.offsetLeft,
+            behavior: "smooth",
+        });
     }, [active]);
 
     // drag lateral

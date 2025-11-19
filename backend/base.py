@@ -1316,12 +1316,271 @@ def get_or_create_user(db: Session, name: str, email: str, password: str = "demo
         return user
     return create_user(db, name=name, email=email, password=password)
 
+# -----------------------------------------------------------------------
+# DEMO SEED DATA
+# -----------------------------------------------------------------------
+
+RSVP_TO_STATUS = {
+    "pending": "pending",
+    "confirmed": "accepted",
+    "rejected": "rejected",
+}
+
+initial_events = [
+    {
+        "title": "Reunión de kickoff Q4",
+        # pasado
+        "date": "2025-10-14",
+        "time": "09:30",
+        "location": "Sala 1A",
+        "description": "Definición de objetivos y responsabilidades del nuevo trimestre. Se revisarán métricas del Q3.",
+        "invitees": [
+            {"name": "Ana", "email": "ana@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Luis", "email": "luis@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Sofía", "email": "sofia@ejemplo.com", "rsvp": "pending"},
+            {"name": "Carlos", "email": "carlos@ejemplo.com", "rsvp": "rejected"},
+            {"name": "Valeria", "email": "valeria@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Tomás", "email": "tomas@ejemplo.com", "rsvp": "pending"},
+            {"name": "Lucía", "email": "lucia@ejemplo.com", "rsvp": "confirmed"},
+        ],
+    },
+    {
+        "title": "Observación astronómica",
+        # FUTURO
+        "date": "2025-12-05",
+        "time": "20:30",
+        "location": "Mirador Cerro Alto",
+        "description": "Noche despejada, se llevará telescopio y cámara. Revisaremos constelaciones visibles y exposición larga.",
+        "invitees": [
+            {"name": "Héctor", "email": "hector@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "María", "email": "maria@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Esteban", "email": "esteban@ejemplo.com", "rsvp": "pending"},
+            {"name": "Camila", "email": "camila@ejemplo.com", "rsvp": "pending"},
+            {"name": "Andrea", "email": "andrea@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Pablo", "email": "pablo@ejemplo.com", "rsvp": "rejected"},
+            {"name": "Rosa", "email": "rosa@ejemplo.com", "rsvp": "pending"},
+        ],
+    },
+    {
+        "title": "Entrega final de proyecto de Sistemas",
+        # pasado reciente
+        "date": "2025-11-10",
+        "time": "11:59",
+        "location": "Campus Virtual",
+        "description": "Subir PDF y repositorio antes del mediodía. Asegurarse de incluir README y pruebas unitarias.",
+        "invitees": [
+            {"name": "Laura", "email": "laura@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Ricardo", "email": "ricardo@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Juan", "email": "juan@ejemplo.com", "rsvp": "pending"},
+            {"name": "Sara", "email": "sara@ejemplo.com", "rsvp": "pending"},
+            {"name": "Elena", "email": "elena@ejemplo.com", "rsvp": "rejected"},
+            {"name": "Mateo", "email": "mateo@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Diana", "email": "diana@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Hugo", "email": "hugo@ejemplo.com", "rsvp": "pending"},
+        ],
+    },
+    {
+        "title": "Cumpleaños de Valeria",
+        # ayer aprox (si estás el 19)
+        "date": "2025-11-18",
+        "time": "19:30",
+        "location": "Casa de Valeria",
+        "description": "Fiesta temática de los 2000s. Habrá karaoke, comida y bebidas. Se permite traer un invitado.",
+        "invitees": [
+            {"name": "Valeria", "email": "val@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Pablo", "email": "pablo@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Marina", "email": "marina@ejemplo.com", "rsvp": "pending"},
+            {"name": "Héctor", "email": "hector@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Lucía", "email": "lucia@ejemplo.com", "rsvp": "rejected"},
+            {"name": "Santiago", "email": "santiago@ejemplo.com", "rsvp": "pending"},
+            {"name": "David", "email": "david@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Paola", "email": "paola@ejemplo.com", "rsvp": "confirmed"},
+        ],
+    },
+    {
+        "title": "Workshop: Rust y concurrencia",
+        # FUTURO
+        "date": "2025-12-10",
+        "time": "16:00",
+        "location": "Lab 3",
+        "description": "Exploraremos el modelo async/await, Tokio y patrones de sincronización. Nivel intermedio.",
+        "invitees": [
+            {"name": "Mario", "email": "mario@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Iván", "email": "ivan@ejemplo.com", "rsvp": "pending"},
+            {"name": "Laura", "email": "laura@ejemplo.com", "rsvp": "pending"},
+            {"name": "César", "email": "cesar@ejemplo.com", "rsvp": "rejected"},
+            {"name": "Antonia", "email": "antonia@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Rafael", "email": "rafael@ejemplo.com", "rsvp": "confirmed"},
+        ],
+    },
+    {
+        "title": "Hacknight universitaria",
+        # FUTURO
+        "date": "2025-12-20",
+        "time": "18:00",
+        "location": "Cowork — 2° piso",
+        "description": "Sesión nocturna con retos de IA, mini hackathon y pizza libre hasta medianoche.",
+        "invitees": [
+            {"name": "Alejandro", "email": "ale@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Elena", "email": "elena@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Miguel", "email": "miguel@ejemplo.com", "rsvp": "pending"},
+            {"name": "Sofía", "email": "sofia@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Camilo", "email": "camilo@ejemplo.com", "rsvp": "pending"},
+            {"name": "Tania", "email": "tania@ejemplo.com", "rsvp": "rejected"},
+            {"name": "Andrés", "email": "andres@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Nicolás", "email": "nico@ejemplo.com", "rsvp": "confirmed"},
+        ],
+    },
+    {
+        "title": "Retrospectiva sprint 42",
+        # FUTURO (ya 2026)
+        "date": "2026-01-07",
+        "time": "14:00",
+        "location": "Sala 2B",
+        "description": "Revisión de métricas, tiempos de entrega y sugerencias del equipo.",
+        "invitees": [
+            {"name": "Ana", "email": "ana@ejemplo.com", "rsvp": "pending"},
+            {"name": "Luis", "email": "luis@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Sofía", "email": "sofia@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Valeria", "email": "valeria@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Carlos", "email": "carlos@ejemplo.com", "rsvp": "rejected"},
+            {"name": "Martín", "email": "martin@ejemplo.com", "rsvp": "confirmed"},
+        ],
+    },
+    {
+        "title": "Retro del sprint 41",
+        # pasado
+        "date": "2025-09-25",
+        "time": "15:00",
+        "location": "Sala 2B",
+        "description": "Revisión de aprendizajes y mejoras para próximos ciclos de desarrollo.",
+        "invitees": [
+            {"name": "Ana", "email": "ana@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Luis", "email": "luis@ejemplo.com", "rsvp": "pending"},
+            {"name": "Pedro", "email": "pedro@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Diana", "email": "diana@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Gabriel", "email": "gabriel@ejemplo.com", "rsvp": "rejected"},
+        ],
+    },
+    {
+        "title": "Cena aniversario de la facultad",
+        # pasado
+        "date": "2025-10-05",
+        "time": "20:00",
+        "location": "Club Social Universitario",
+        "description": "Cena formal de gala con profesores y egresados. Dress code: formal.",
+        "invitees": [
+            {"name": "Mónica", "email": "monica@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Camila", "email": "camila@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Jorge", "email": "jorge@ejemplo.com", "rsvp": "rejected"},
+            {"name": "Sebastián", "email": "sebastian@ejemplo.com", "rsvp": "pending"},
+            {"name": "Liliana", "email": "liliana@ejemplo.com", "rsvp": "confirmed"},
+            {"name": "Oscar", "email": "oscar@ejemplo.com", "rsvp": "pending"},
+        ],
+    },
+]
+
+initial_invites = [
+    {
+        "title": "Revisión paper de IA",
+        "date": "2025-09-20",
+        "time": "17:00",
+        "location": "Biblioteca — Sala 4",
+        "host": "Carolina",
+        "rsvp": "confirmed",
+    },
+    {
+        "title": "Charla sobre observatorios amateurs",
+        "date": "2025-10-08",
+        "time": "18:30",
+        "location": "Observatorio Municipal",
+        "host": "Julián",
+        "rsvp": "rejected",
+    },
+    {
+        "title": "Asado del viernes",
+        "date": "2025-10-11",
+        "time": "19:00",
+        "location": "Patio de Andrés",
+        "host": "Andrés",
+        "rsvp": "pending",
+    },
+    {
+        "title": "Meetup Linux & Homelab",
+        # FUTURO cercano
+        "date": "2025-11-25",
+        "time": "15:30",
+        "location": "Makerspace U.",
+        "host": "Comunidad LUG",
+        "rsvp": "confirmed",
+    },
+    {
+        "title": "Workshop Docker avanzado",
+        # FUTURO
+        "date": "2025-12-08",
+        "time": "10:00",
+        "location": "Aula Magna",
+        "host": "Paula",
+        "rsvp": "pending",
+    },
+    {
+        "title": "Concierto Oasis Tribute",
+        # FUTURO
+        "date": "2025-12-31",
+        "time": "21:00",
+        "location": "Teatro Central",
+        "host": "Mateo",
+        "rsvp": "confirmed",
+    },
+    {
+        "title": "Fotografía nocturna urbana",
+        # FUTURO
+        "date": "2025-12-01",
+        "time": "19:00",
+        "location": "Puente del Río",
+        "host": "Lucía",
+        "rsvp": "pending",
+    },
+    {
+        "title": "Reunión de cátedra",
+        "date": "2025-09-30",
+        "time": "11:00",
+        "location": "Sala Zoom A",
+        "host": "Profesor Ríos",
+        "rsvp": "rejected",
+    },
+    {
+        "title": "Café con el equipo",
+        # FUTURO muy cercano
+        "date": "2025-11-22",
+        "time": "09:00",
+        "location": "Café Origen",
+        "host": "Ana",
+        "rsvp": "pending",
+    },
+    {
+        "title": "Taller: Testing en Rust",
+        # FUTURO (2026)
+        "date": "2026-01-15",
+        "time": "16:30",
+        "location": "Lab 2",
+        "host": "Diego",
+        "rsvp": "confirmed",
+    },
+]
+
+
+def get_or_create_user(db: Session, name: str, email: str, password: str = "demo1234") -> User:
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        return user
+    return create_user(db, name=name, email=email, password=password)
+
 
 def seed_demo_data():
-    """Resetea la DB y la llena con eventos e invitaciones de prueba."""
+    """Resetea la DB y la llena con eventos, contactos, equipos e invitaciones de prueba."""
     print("⚠️  Reseteando base de datos...")
     reset_db()
-    print('si funcione')
     init_db()
 
     with get_session_cm() as db:
@@ -1334,7 +1593,11 @@ def seed_demo_data():
         )
         print("👤 Usuario demo:", current_user.id, current_user.email)
 
+        # ---------------------------------------------------------------
         # 1) Eventos creados por el usuario actual (equivalente a initialEvents)
+        # ---------------------------------------------------------------
+        events_by_title: dict[str, Event] = {}
+
         for ev in initial_events:
             event = create_event(
                 db=db,
@@ -1347,6 +1610,7 @@ def seed_demo_data():
                 endtime=None,
             )
 
+            events_by_title[event.title] = event
             print("📅 Evento creado:", event.id, event.title)
 
             # Invitados para ese evento
@@ -1367,7 +1631,10 @@ def seed_demo_data():
                     status_str,
                 )
 
-        # 2) Eventos donde el usuario actual está invitado (equivalente a initialInvites)
+        # ---------------------------------------------------------------
+        # 2) Eventos donde el usuario actual está invitado (initialInvites)
+        #   (ahora sí usando host_user como dueño y los datos correctos)
+        # ---------------------------------------------------------------
         for inv_ev in initial_invites:
             # Crea un "host" para cada evento, si no existe
             host_email = f"{inv_ev['host'].lower().replace(' ', '_')}@ejemplo.com"
@@ -1379,15 +1646,14 @@ def seed_demo_data():
 
             event = create_event(
                 db=db,
-                owner_id=current_user.id,
-                title=ev["title"],
-                description=ev["description"],
-                location=ev["location"],
-                date=date.fromisoformat(ev["date"]),
-                time=time.fromisoformat(ev["time"]),
+                owner_id=host_user.id,
+                title=inv_ev["title"],
+                description=f"Invitación de {inv_ev['host']} a {inv_ev['title']}.",
+                location=inv_ev["location"],
+                date=date.fromisoformat(inv_ev["date"]),
+                time=time.fromisoformat(inv_ev["time"]),
                 endtime=None,
             )
-
 
             status_str = RSVP_TO_STATUS[inv_ev["rsvp"]]
             invitation = invite_user_to_event(db, event.id, current_user.id)
@@ -1402,7 +1668,153 @@ def seed_demo_data():
                 status_str,
             )
 
+        # ---------------------------------------------------------------
+        # 3) Contactos: aceptados, pendientes recibidos y pendientes enviados
+        #    (para que la pestaña Personas tenga de todo)
+        # ---------------------------------------------------------------
+        ana = get_or_create_user(db, "Ana", "ana@ejemplo.com")
+        luis = get_or_create_user(db, "Luis", "luis@ejemplo.com")
+        sofia = get_or_create_user(db, "Sofía", "sofia@ejemplo.com")
+        hector = get_or_create_user(db, "Héctor", "hector@ejemplo.com")
+        camila = get_or_create_user(db, "Camila", "camila@ejemplo.com")
+        maria = get_or_create_user(db, "María", "maria@ejemplo.com")
+
+        # Aceptados: Ana, Luis, Sofía
+        for u in (ana, luis, sofia):
+            try:
+                req = send_contact_request(db, user_id=current_user.id, contact_id=u.id)
+                accept_contact_request(db, user_id=current_user.id, contact_id=u.id)
+                print("🤝 Contacto aceptado:", current_user.email, "<->", u.email)
+            except ValueError as e:
+                print("Contact already exists / error:", e)
+
+        # Pendientes recibidos: Héctor -> demo, Camila -> demo
+        for u in (hector, camila):
+            try:
+                send_contact_request(db, user_id=u.id, contact_id=current_user.id)
+                print("📥 Solicitud recibida de:", u.email)
+            except ValueError as e:
+                print("Error creando solicitud recibida:", e)
+
+        # Pendiente enviado: demo -> María
+        try:
+            send_contact_request(db, user_id=current_user.id, contact_id=maria.id)
+            print("📤 Solicitud enviada a:", maria.email)
+        except ValueError as e:
+            print("Error creando solicitud enviada:", e)
+
+        # ---------------------------------------------------------------
+        # 4) Equipos: algunos creados por demo, otros donde demo es miembro
+        # ---------------------------------------------------------------
+        # Equipo creado por demo para proyectos/universidad
+        team_proj = create_team(
+            db,
+            owner_id=current_user.id,
+            name="Equipo Proyecto Sistemas",
+            description="Team para coordinar entregas, reuniones y revisiones de proyecto de Sistemas.",
+        )
+        print("👥 Equipo creado por demo:", team_proj.id, team_proj.name)
+
+        # Miembros de ese equipo (aceptados)
+        laura = get_or_create_user(db, "Laura", "laura@ejemplo.com")
+        ricardo = get_or_create_user(db, "Ricardo", "ricardo@ejemplo.com")
+        diana = get_or_create_user(db, "Diana", "diana@ejemplo.com")
+
+        for member_user in (laura, ricardo, diana):
+            try:
+                tm = invite_user_to_team(db, team_id=team_proj.id, user_id=member_user.id, role="member")
+                tm.status = "accepted"
+                print("  ↳ Miembro aceptado en", team_proj.name, ":", member_user.email)
+            except ValueError as e:
+                print("  ↳ Error agregando miembro:", e)
+
+        # Team donde demo es sólo miembro (no owner) – por ejemplo de observación astronómica
+        team_obs_owner = get_or_create_user(db, "María", "maria@ejemplo.com")
+        team_obs = create_team(
+            db,
+            owner_id=team_obs_owner.id,
+            name="Astrofoto Crew",
+            description="Grupo para coordinar salidas de observación astronómica y fotografía nocturna.",
+        )
+        print("👥 Equipo externo:", team_obs.id, team_obs.name)
+
+        # Demo invitado y aceptado
+        try:
+            tm_demo = invite_user_to_team(db, team_id=team_obs.id, user_id=current_user.id, role="member")
+            tm_demo.status = "accepted"
+            print("  ↳ Demo agregado como miembro a", team_obs.name)
+        except ValueError as e:
+            print("  ↳ Error invitando demo a", team_obs.name, ":", e)
+
+        # Otros miembros del equipo de astrofoto
+        lucia = get_or_create_user(db, "Lucía", "lucia@ejemplo.com")
+        hector = get_or_create_user(db, "Héctor", "hector@ejemplo.com")
+
+        for member_user in (lucia, hector):
+            try:
+                tm = invite_user_to_team(db, team_id=team_obs.id, user_id=member_user.id, role="member")
+                tm.status = "accepted"
+                print("  ↳ Miembro aceptado en", team_obs.name, ":", member_user.email)
+            except ValueError as e:
+                print("  ↳ Error agregando miembro:", e)
+
+        # Pendiente de invitación de equipo para demo (para que la pestaña de invites de equipo tenga algo)
+        team_hack_owner = get_or_create_user(db, "Andrés", "andres@ejemplo.com")
+        team_hack = create_team(
+            db,
+            owner_id=team_hack_owner.id,
+            name="Hacknight Squad",
+            description="Equipo para hacknights, mini-hackathons y retos de programación nocturnos.",
+        )
+        print("👥 Equipo externo (hacknight):", team_hack.id, team_hack.name)
+
+        # Demo con invitación pendiente a Hacknight Squad
+        try:
+            invite_user_to_team(db, team_id=team_hack.id, user_id=current_user.id, role="member")
+            print("  ↳ Invitación pendiente a demo en", team_hack.name)
+        except ValueError as e:
+            print("  ↳ Error invitando demo a", team_hack.name, ":", e)
+
+        # ---------------------------------------------------------------
+        # 5) Invitar equipos a eventos (para probar EventInvitesTeam + auto_invite_team_members)
+        # ---------------------------------------------------------------
+        hack_event = events_by_title.get("Hacknight universitaria")
+        astro_event = events_by_title.get("Observación astronómica")
+
+        if hack_event:
+            try:
+                evt_team, created_invites = invite_team_and_members_to_event(
+                    db,
+                    event_id=hack_event.id,
+                    team_id=team_proj.id,  # equipo de proyecto demo
+                )
+                print(
+                    f"📌 Equipo '{team_proj.name}' invitado a '{hack_event.title}', "
+                    f"{len(created_invites)} invitaciones a miembros generadas."
+                )
+                # Marcamos la invitación de equipo como aceptada para que luzca más completa
+                accept_team_event_invite(db, event_id=hack_event.id, team_id=team_proj.id)
+            except ValueError as e:
+                print("Error invitando equipo a Hacknight:", e)
+
+        if astro_event:
+            try:
+                evt_team, created_invites = invite_team_and_members_to_event(
+                    db,
+                    event_id=astro_event.id,
+                    team_id=team_obs.id,  # equipo de astrofoto
+                )
+                print(
+                    f"📌 Equipo '{team_obs.name}' invitado a '{astro_event.title}', "
+                    f"{len(created_invites)} invitaciones a miembros generadas."
+                )
+                # Dejamos esta invitación de equipo como pending para que también se vea ese estado
+            except ValueError as e:
+                print("Error invitando equipo a Observación astronómica:", e)
+
         print("✅ Seed de datos demo completado.")
+
+
 
 def main():
     seed_demo_data()

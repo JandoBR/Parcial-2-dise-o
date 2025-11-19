@@ -363,12 +363,44 @@ export default function Invitations({ invites = [], onRsvp, onDeleteInvite, high
 }
 
 function StatusPill({ rsvp }) {
-    const state = (rsvp === "confirmed" || rsvp === "rejected" || rsvp === "pending") ? rsvp : "pending";
-    const label = state === "confirmed" ? "Confirmado" : state === "rejected" ? "Rechazado" : "Pendiente";
-    const bg = state === "confirmed" ? "#e0f2fe" : state === "rejected" ? "#fee2e2" : "#f3f4f6";
-    const color = state === "confirmed" ? "#075985" : state === "rejected" ? "#7f1d1d" : "#374151";
+    const raw = (rsvp || "").toLowerCase();
+
+    // normalizamos lo que venga del backend
+    let state;
+    if (raw === "accepted" || raw === "confirmed" || raw === "confirmado") {
+        state = "confirmed";
+    } else if (raw === "rejected" || raw === "rechazado") {
+        state = "rejected";
+    } else {
+        state = "pending";
+    }
+
+    const label =
+        state === "confirmed" ? "Confirmado"
+            : state === "rejected" ? "Rechazado"
+                : "Pendiente";
+
+    const bg =
+        state === "confirmed" ? "#e0f2fe"
+            : state === "rejected" ? "#fee2e2"
+                : "#f3f4f6";
+
+    const color =
+        state === "confirmed" ? "#075985"
+            : state === "rejected" ? "#7f1d1d"
+                : "#374151";
+
     return (
-        <span style={{ background: bg, color, borderRadius: 9999, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>
+        <span
+            style={{
+                background: bg,
+                color,
+                borderRadius: 9999,
+                padding: "4px 10px",
+                fontSize: 12,
+                fontWeight: 600,
+            }}
+        >
             {label}
         </span>
     );
