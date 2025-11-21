@@ -132,17 +132,21 @@ export default function Dashboard({ apiBase, showToast, events, invites, isActiv
         });
 
         const acceptedFromInvites = (invites || [])
-            .filter(i => i.rsvp === "confirmed")
+            .filter(i => {
+                const raw = (i.rsvp ?? i.status ?? "").toLowerCase();
+                return raw === "confirmed" || raw === "accepted";
+            })
             .map(i => {
                 const dt = new Date(`${i.date}T${i.time || "00:00"}`);
                 return { ...i, _when: dt, source: "invited" };
             });
 
         return [...ownEvents, ...acceptedFromInvites]
-            .filter(ev => !isNaN(ev._when) && ev._when >= now)
+            .filter(ev => ev._when instanceof Date && !isNaN(ev._when) && ev._when >= now)
             .sort((a, b) => a._when - b._when)
             .slice(0, 5);
     }, [events, invites]);
+
 
     return (
         <div
