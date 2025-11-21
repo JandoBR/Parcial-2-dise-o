@@ -7,6 +7,7 @@ import People from "../sections/personas.jsx";
 import Teams from "../sections/Teams.jsx";
 import Dashboard from "../sections/Dashboard.jsx";
 import bgImage from "../assets/photo-1464618663641-bbdd760ae84a.jpg";
+import logo from "../assets/logo.png";
 
 const API_BASE = "/api";
 
@@ -468,6 +469,26 @@ export default function AppHome() {
         }
     }, []);
 
+    const navRef = useRef(null);
+    const [logoSize, setLogoSize] = useState(24);
+
+    useEffect(() => {
+        const el = navRef.current;
+        if (!el) return;
+
+        const update = () => {
+            const h = el.clientHeight || 0;
+            const size = Math.max(18, h * 0.8);
+            setLogoSize(size);
+        };
+
+        update();
+
+        const obs = new ResizeObserver(update);
+        obs.observe(el);
+        return () => obs.disconnect();
+    }, []);
+
     return (
         <div
             className="shell"
@@ -480,7 +501,30 @@ export default function AppHome() {
             }}
         >
             <header className="shell__header container header-bar">
-                <div className="brand brand--logo">EventEase</div>
+                <div
+                    className="brand brand--logo"
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                    }}
+                >
+                    <img
+                        src={logo}
+                        alt="EventEase logo"
+                        style={{
+                            height: logoSize,
+                            width: "auto",
+                            display: "block",
+                            objectFit: "contain",
+                            borderRadius: 6,
+                        }}
+                    />
+                    <span style={{ fontWeight: 800, fontSize: 16 }}>
+                        EventEase
+                    </span>
+                </div>
+
 
                 <nav className="tabs tabs--header">
                     {TABS.map((t, i) => (
